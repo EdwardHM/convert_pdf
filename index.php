@@ -34,7 +34,7 @@ class myPDF extends FPDF{
 
     function headerTable(){
         $this->SetFont('Times', 'B',12);
-        $this->Cell(18,10, 'ID', 1, 0, 'C');
+        $this->Cell(18,10, 'No', 1, 0, 'C');
         $this->Cell(55,10, 'Nama', 1, 0, 'C');
         $this->Cell(40,10, 'Keterangan', 1, 0, 'C');
         $this->Cell(35,10, 'Di Kantor', 1, 0, 'C');
@@ -43,12 +43,23 @@ class myPDF extends FPDF{
         $this->Ln();
     }
 
-    function viewTable($db, $uuid){
+    function viewTable($db, $uuid,$kedudukan,$dicari){
         $this->SetFont('Times', '',12);
         $count = 1;
         // $uuid = "5de388b86217f0.84892492";
-        // jika untuk user tertentu
-        $stmt = $db->query("select nama, keterangan, is_in_office, lokasi, created_at from tbl_kehadiran inner join tbl_user using (uuid_user) where uuid_user='".$uuid."'");
+        if (!is_null($kedudukan)){
+            if(!is_null($dicari)){
+                //jika untuk user tertentu
+                $stmt = $db->query("SELECT nama, keterangan, is_in_office, lokasi, created_at FROM tbl_kehadiran INNER JOIN tbl_user USING (uuid_user) WHERE nama='".$dicari."' ORDER BY created_at DESC");
+            } else{
+                // Untuk Semua
+                $stmt = $db->query("SELECT nama, keterangan, is_in_office, lokasi, created_at FROM tbl_kehadiran INNER JOIN tbl_user USING (uuid_user) ORDER BY created_at DESC");
+            }      
+        } else{
+            // dari anggota cari berdasarkan uuid user 
+            $stmt = $db->query("SELECT nama, keterangan, is_in_office, lokasi, created_at FROM tbl_kehadiran INNER JOIN tbl_user USING (uuid_user) WHERE uuid_user='".$uuid."' ORDER BY created_at DESC");
+        }
+
 
         //semua
         // $stmt = $db->query("select nama, keterangan, is_in_office, lokasi, created_at from tbl_kehadiran inner join tbl_user using (uuid_user)");
@@ -70,22 +81,36 @@ class myPDF extends FPDF{
 
 if(!is_null($data)){
     $uuid = $data->user_id;
+    $kedudukan = $data->jabatan;
+    $dicari = $data->cari;
     // $uuid = "5de388b86217f0.84892492";
     $pdf = new myPDF();
     $pdf->AliasNBPages();
     $pdf->AddPage('L', 'A4', 0);
     $pdf->headerTable();
-    $pdf->viewTable($db,$uuid);
+    $pdf->viewTable($db,$uuid,$kedudukan,$dicari);
     // $pdf->Output();
     // $pdf->Output('F','daftar_presensi.pdf', 'isUTF8');
     // $pdf->Output("D","$uuid.pdf");
-    $filename="D:/xampp/htdocs/MembuatPdf/FPDF/$uuid.pdf";
-    $pdf->Output('F',$filename,TRUE);
-    $response["error"] = FALSE;
+    if(!is_null($kedudukan)){
+        if(!is_null($dicari)){
+            $filename="D:/xampp/htdocs/MembuatPdf/FPDF/$dicari.pdf";
+            $pdf->Output('F',$filename,TRUE);
+            $response["error"] = FALSE;
+        } else{
+            $filename="D:/xampp/htdocs/MembuatPdf/FPDF/DaftarSemua.pdf";
+            $pdf->Output('F',$filename,TRUE);
+            $response["error"] = FALSE;
+        }
+    } else{
+        $filename="D:/xampp/htdocs/MembuatPdf/FPDF/$uuid.pdf";
+        $pdf->Output('F',$filename,TRUE);
+        $response["error"] = FALSE;
+    }
     echo json_encode($response);
 } else{
     $response["error"] = TRUE;
-    $response["error_msg"] = "gagaga";
+    $response["error_msg"] = "gagal";
     echo json_encode($response);
 }
    
